@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>From Dull to Genius - App</title>
+    <style>
+        /* --- APP THEME VARIABLES --- */
+        :root {
+            --bg-color: #fdfaf3;
+            --text-color: #1a1a1a;
+            --accent-color: #8b2d1f;
+            --card-bg: #ffffff;
+            --font-body: 'Georgia', serif;
+            --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-size: 17px;
+            --line-height: 1.7;
+            --border-color: #e0e0e0;
+        }
+
+        body.dark-mode {
+            --bg-color: #121212;
+            --text-color: #e8e8e8;
+            --accent-color: #ff8a65;
+            --card-bg: #1e1e1e;
+            --border-color: #333333;
+        }
+
+        /* --- RESET & LAYOUT --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: var(--font-ui); 
+            background-color: #f0f2f5; /* Outside app bg */
+            color: var(--text-color); 
+            transition: background-color 0.3s, color 0.3s;
+            display: flex; justify-content: center; height: 100vh; overflow: hidden;
+        }
+
+        /* Phone Container */
+        #app-container {
+            width: 100%; max-width: 480px; height: 100%;
+            background-color: var(--bg-color);
+            position: relative; overflow: hidden; display: flex; flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        /* Screen Management */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column;
+            background-color: var(--bg-color);
+            transition: transform 0.3s ease;
+        }
+        .screen.active { display: flex; }
+
+        /* --- SCREEN 1: LOGIN --- */
+        #login-screen { justify-content: center; padding: 30px; text-align: center; }
+        .logo { font-size: 3rem; margin-bottom: 10px; }
+        .app-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 5px; color: var(--accent-color); }
+        .app-subtitle { font-size: 0.9rem; color: gray; margin-bottom: 30px; }
+        
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; color: var(--text-color); }
+        .input-group input {
+            width: 100%; padding: 15px; border: 1px solid var(--border-color); 
+            border-radius: 8px; font-size: 1rem; background: var(--card-bg); color: var(--text-color);
+        }
+        .btn {
+            width: 100%; padding: 15px; background-color: var(--accent-color); 
+            color: white; border: none; border-radius: 8px; font-size: 1rem; 
+            font-weight: bold; cursor: pointer; margin-top: 10px;
+        }
+        .btn:active { opacity: 0.8; }
+
+        /* --- SCREEN 2: LIBRARY --- */
+        #library-screen { padding: 20px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header h2 { font-family: var(--font-ui); font-size: 1.2rem; }
+        
+        .book-card {
+            background: var(--card-bg); border-radius: 12px; padding: 20px; 
+            text-align: center; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .book-cover {
+            width: 140px; height: 200px; margin: 0 auto 15px;
+            background: linear-gradient(135deg, #f5af19, #f12711); 
+            border-radius: 6px; display: flex; align-items: center; justify-content: center;
+            padding: 10px; color: white; font-weight: bold; font-family: var(--font-body); font-size: 1.2rem;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.2);
+        }
+        .book-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; }
+        .book-author { font-size: 0.9rem; color: gray; margin-bottom: 20px; }
+
+        /* --- SCREEN 3: READER --- */
+        #reader-screen { z-index: 10; }
+        .reader-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px; border-bottom: 1px solid var(--border-color);
+            background: var(--bg-color); position: sticky; top: 0;
+        }
+        .back-btn { font-size: 1.5rem; cursor: pointer; color: var(--accent-color); background: none; border: none; }
+        .reader-controls button { background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-left: 10px; color: var(--text-color); }
+
+        .reader-content {
+            padding: 25px 20px; overflow-y: auto; flex: 1;
+            font-family: var(--font-body); font-size: var(--font-size); line-height: var(--line-height); color: var(--text-color);
+        }
+
+        /* Book Formatting Rules (The CSS we discussed) */
+        .chapter-title { color: var(--accent-color); font-size: 1.8em; margin-bottom: 1em; font-family: var(--font-ui); line-height: 1.2; }
+        .drop-cap::first-letter { float: left; font-size: 4em; line-height: 0.8; padding-right: 8px; padding-top: 4px; color: var(--accent-color); font-weight: bold; }
+        .pull-quote { border-left: 4px solid var(--accent-color); padding-left: 15px; font-style: italic; font-size: 1.1em; margin: 20px 0; opacity: 0.9; }
+        .callout { padding: 15px; border-radius: 8px; margin: 20px 0; font-family: var(--font-ui); font-size: 0.95em; border-left: 5px solid #ff9800; background-color: rgba(255, 152, 0, 0.1); }
+        .callout h3 { margin-bottom: 5px; font-size: 1.1em; }
+        .book-list { padding-left: 20px; margin-bottom: 20px; }
+        .book-list li { margin-bottom: 10px; }
+        
+        /* Hide scrollbar for clean look */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        
+        <!-- LOGIN SCREEN -->
+        <div id="login-screen" class="screen active">
+            <div class="logo">🔐</div>
+            <h1 class="app-title">Unlock Your Access</h1>
+            <p class="app-subtitle">Enter your email and the 6-digit code you received after payment.</p>
+            
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" placeholder="you@example.com" id="email-input">
+            </div>
+            <div class="input-group">
+                <label>Access Code</label>
+                <input type="text" placeholder="e.g. 482910" id="code-input" maxlength="6">
+            </div>
+            
+            <button class="btn" onclick="login()">Activate & Read</button>
+            <p style="margin-top: 15px; font-size: 0.8rem; color: gray;">Single-device lock enabled.</p>
+        </div>
+
+        <!-- LIBRARY SCREEN -->
+        <div id="library-screen" class="screen">
+            <div class="header">
+                <h2>My Library</h2>
+                <button class="reader-controls" onclick="toggleDarkMode()" style="font-size: 1.2rem; background:none; border:none;">🌓</button>
+            </div>
+            
+            <div class="book-card">
+                <div class="book-cover">From Dull to Genius</div>
+                <div class="book-title">From Dull to Genius</div>
+                <div class="book-author">By Uduvwuode Simeon Ogho</div>
+                <button class="btn" onclick="openReader()">Continue Reading</button>
+            </div>
+        </div>
+
+        <!-- READER SCREEN -->
+        <div id="reader-screen" class="screen">
+            <div class="reader-header">
+                <button class="back-btn" onclick="goBack()">←</button>
+                <div class="reader-controls">
+                    <button onclick="changeFontSize(-1)">A-</button>
+                    <button onclick="changeFontSize(1)">A+</button>
+                </div>
+            </div>
+            
+            <div class="reader-content" id="reader-content">
+                
+                <!-- THE BOOK HTML GOES HERE -->
+                <article class="book-chapter">
+                    <h1 class="chapter-title">Introduction: This Is Not Another Boring Book</h1>
+                    
+                    <p class="drop-cap">Let me guess—you don't really like reading books like this. Right? I know that feeling. Someone hands you a big motivational or academic success book filled with long grammar, boring...</p>
+                    
+                    <p>I'm not here to sound like a professor or a motivational speaker shouting, "Read your books! Read your books!" If that worked, everyone would be first in class by now. Instead, I want to gist with you—the way we gist after school about teachers' wahala, exams, or how sleep can disgrace somebody right in the middle of reading. That's the vibe. Because I know exactly how you feel.</p>
+
+                    <h2 style="font-family: var(--font-ui); margin-top: 1.5em; margin-bottom: 0.5em;">That Frustrating Moment...</h2>
+                    <p>Have you ever come out of an exam hall smiling like you just killed the paper? You even gist your friends:</p>
+                    
+                    <blockquote class="pull-quote">
+                        <p>"Guy, e sure for me oh!"</p>
+                    </blockquote>
+
+                    <p>Only for results to come out and you're staring at 6/20 like, "Is this a prank?" Or that time you actually read all night—your eyes red like someone that cried all night—yet the next day in class, when the teacher asks you a simple question, your brain just goes blank. You're there stammering: "Err... sir... err..." Meanwhile, the unserious guy at the back—who didn't even open his textbook—answers it sharp-sharp.</p>
+
+                    <p>Tell me the truth, doesn't it make you feel like maybe you're just not smart? I've been there. And I'm here to tell you — you're not dull, not lazy, and not cursed. What's missing are the principles that make learning easier and success predictable.</p>
+
+                    <h2 style="font-family: var(--font-ui); margin-top: 1.5em; margin-bottom: 0.5em;">I Know Your Struggle</h2>
+                    <p>I know how it feels when:</p>
+                    <ul class="book-list">
+                        <li>You open your book and after 30 minutes, you're still on the same page.</li>
+                        <li>You promise yourself, "I'll read after siesta," then wake up at 9pm confused.</li>
+                        <li>You say you're doing group reading, but before 20 minutes, everybody is talking football or TikTok.</li>
+                        <li>Your parents shout, "Read! Read!" but nobody ever explained how to read in the first place.</li>
+                    </ul>
+
+                    <div class="callout">
+                        <h3>1. No Clear Motivation (Your WHY Is Weak)</h3>
+                        <p>Be honest: why do you want to pass? Just so mummy won't shout? So daddy won't compare you to that your cousin? That kind of weak "why" can't carry you far. We'll gist more about finding your real why in the next chapter.</p>
+                    </div>
+
+                </article>
+                <!-- END BOOK HTML -->
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- APP LOGIC ---
+
+        // 1. Navigation
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function login() {
+            const email = document.getElementById('email-input').value;
+            const code = document.getElementById('code-input').value;
+            
+            if(!email || !code) {
+                alert("Please enter your email and access code.");
+                return;
+            }
+            // Simulate API call to your server
+            setTimeout(() => {
+                showScreen('library-screen');
+            }, 300);
+        }
+
+        function openReader() {
+            showScreen('reader-screen');
+            document.getElementById('reader-content').scrollTop = 0; // Reset scroll
+        }
+
+        function goBack() {
+            showScreen('library-screen');
+        }
+
+        // 2. Theme & Settings
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        let currentFontSize = 17;
+        function changeFontSize(change) {
+            currentFontSize += change;
+            if(currentFontSize < 14) currentFontSize = 14;
+            if(currentFontSize > 24) currentFontSize = 24;
+            document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
+        }
+    </script>
+</body>
+</html>
