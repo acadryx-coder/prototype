@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>From Dull to Genius</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@capacitor/core@5.0.0/dist/capacitor.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@capacitor-community/sqlite@5.0.0/dist/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init()</script>    
+    <style>
+        :root { --bg: #f7f4eb; --text: #1a1a1a; --accent: #8b2d1f; --card: #ffffff; --font-b: 'Georgia', serif; --font-u: -apple-system, sans-serif; --fs: 17px; --lh: 1.7; --border: #e0e0e0; --wa: #25D366; }
+        body.dark-mode { --bg: #121212; --text: #e8e8e8; --accent: #ff8a65; --card: #1e1e1e; --border: #333; }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { font-family: var(--font-u); background: #e5e5e5; color: var(--text); display: flex; justify-content: center; height: 100vh; overflow: hidden; }
+        
+        #app { width: 100%; max-width: 480px; height: 100%; background: var(--bg); position: relative; overflow: hidden; display: flex; flex-direction: column; }
+        
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none !important; flex-direction: column; background: var(--bg); overflow-y: auto; padding-top: 64px; padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+        .screen.active { display: flex !important; }
+
+        /* Global Header */
+        #app-header { position: absolute; top: 0; left: 0; width: 100%; height: 64px; background: var(--bg); border-bottom: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; padding: 0 15px; z-index: 100; box-sizing: border-box; }
+        #header-title { font-size: 1.2rem; font-weight: 700; font-family: var(--font-b); color: var(--text); text-align: center; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.5px; }
+        #header-title.reading-mode { color: var(--accent); font-size: 1.1rem; }
+        .header-btn { background: none; border: none; font-size: 1.2rem; color: var(--text); cursor: pointer; font-weight: bold; padding: 10px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: background 0.2s; }
+        .header-btn:active { background: rgba(0,0,0,0.05); }
+        .header-btn.hidden { visibility: hidden; pointer-events: none; }
+        .toc-pill { background: rgba(139, 45, 31, 0.08); color: var(--accent); font-family: var(--font-u); font-size: 0.85rem; font-weight: bold; padding: 8px 14px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
+        .toc-pill.hidden { display: none; }
+
+        #error-box { display: none; background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; padding: 15px; margin: 20px auto; border-radius: 8px; width: 90%; max-width: 400px; font-family: var(--font-u); font-size: 0.9rem; text-align: center; z-index: 9999; position: absolute; top: 70px; left: 50%; transform: translateX(-50%); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+        /* Login */
+        .hero { padding: 40px 20px 30px; text-align: center; background: linear-gradient(180deg, rgba(245,175,25,.15) 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); }
+        .hero-book { width: 130px; height: 190px; margin: 0 auto 20px; background: linear-gradient(135deg, #f5af19, #f12711); border-radius: 4px 10px 10px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; color: white; font-weight: bold; font-family: var(--font-b); box-shadow: -5px 5px 15px rgba(0,0,0,0.3), inset 4px 0 0 rgba(255,255,255,0.2); transform: perspective(600px) rotateY(-5deg); }
+        .hero-title { font-size: 1.5rem; font-weight: 800; color: var(--accent); margin-bottom: 8px; }
+        .hero-sub { font-size: 0.85rem; color: gray; font-style: italic; }
+        .home-cont { padding: 20px; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .box { width: 100%; max-width: 350px; background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
+        .box-title { font-size: 1rem; font-weight: bold; margin-bottom: 15px; text-align: center; }
+        .input { width: 100%; padding: 12px 15px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; background: var(--bg); color: var(--text); margin-bottom: 10px; }
+        .btn { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+        .sales { border-top: 4px solid var(--accent); text-align: center; }
+        .price { display: flex; justify-content: center; align-items: baseline; gap: 8px; margin: 10px 0; }
+        .old { text-decoration: line-through; color: gray; font-size: 1rem; }
+        .new { font-size: 1.8rem; font-weight: bold; color: var(--accent); }
+        .wa-btn { display: flex; align-items: center; justify-content: center; width: 100%; padding: 12px; background: var(--wa); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px; }
+        .wa-btn.sec { background: #128C7E; }
+        .wa-btn svg { width: 20px; height: 20px; margin-right: 8px; fill: white; }
+
+        /* Library */
+        .lib-card { background: var(--card); border-radius: 12px; padding: 20px; text-align: center; border: 1px solid var(--border); width: 100%; max-width: 350px; margin: 20px auto 0 auto; }
+        .lib-cover { width: 140px; height: 200px; margin: 0 auto 15px; background: linear-gradient(135deg, #f5af19, #f12711); border-radius: 6px; display: flex; align-items: center; justify-content: center; padding: 10px; color: white; font-weight: bold; font-family: var(--font-b); font-size: 1.2rem; }
+        .btn-text { background: none; border: none; color: gray; font-size: 0.85rem; margin-top: 15px; cursor: pointer; text-decoration: underline; display: block; width: 100%; text-align: center; }
+
+        .ref-card { background: linear-gradient(135deg, #fff 0%, #f0f4ff 100%); border: 1px solid #c7d2fe; padding: 15px; border-radius: 12px; width: 100%; max-width: 350px; margin: 20px auto 0 auto; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        body.dark-mode .ref-card { background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%); border-color: #333; }
+        .ref-code-box { background: var(--bg); border: 1px dashed var(--accent); padding: 10px; font-size: 1.2rem; font-weight: bold; color: var(--accent); border-radius: 8px; margin: 10px 0; letter-spacing: 2px; }
+
+        /* Reader */
+        #reader-screen { z-index: 10; overflow: hidden !important; }
+        #prog-cont { width: 100%; height: 3px; background: rgba(0,0,0,0.05); flex-shrink: 0; }
+        #prog { height: 100%; width: 0%; background: var(--accent); transition: width 0.1s; }
+        #chap-wrap { flex: 1; position: relative; overflow: hidden; }
+        .chap-page { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 25px 25px 100px; overflow-y: auto; font-family: var(--font-b); font-size: var(--fs); line-height: var(--lh); color: var(--text); background: var(--bg); -webkit-hyphens: auto; hyphens: auto; }
+        .chap-page p { margin-bottom: 1.2em; }
+        .next-btn { display: block; width: 100%; margin-top: 40px; padding: 16px; background: var(--accent); color: white; border: none; border-radius: 8px; text-align: center; text-decoration: none; font-family: var(--font-u); font-size: 1rem; font-weight: bold; cursor: pointer; transition: transform 0.1s, opacity 0.2s; box-shadow: 0 4px 10px rgba(139, 45, 31, 0.2); }
+        .next-btn:active { transform: scale(0.98); opacity: 0.8; }
+
+        .slide-in-r { animation: sInR 0.3s ease forwards; z-index: 2; }
+        .slide-out-l { animation: sOutL 0.3s ease forwards; z-index: 1; }
+        .slide-in-l { animation: sInL 0.3s ease forwards; z-index: 2; }
+        .slide-out-r { animation: sOutR 0.3s ease forwards; z-index: 1; }
+        @keyframes sInR { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes sOutL { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+        @keyframes sInL { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        @keyframes sOutR { from { transform: translateX(0); } to { transform: translateX(100%); } }
+
+        /* TOC Modal */
+        #toc-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 50; display: none; flex-direction: column; }
+        #toc-modal.open { display: flex; }
+        .toc-head { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--border); background: var(--bg); }
+        .toc-head h3 { font-size: 1.4rem; font-family: var(--font-b); color: var(--accent); }
+        .toc-list { flex: 1; overflow-y: auto; padding-bottom: 80px; background: var(--card); }
+        .toc-item { padding: 20px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; flex-direction: column; gap: 6px; }
+        .c-label { font-size: 0.7rem; font-family: var(--font-u); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); }
+        .c-name { font-family: var(--font-b); font-size: 1.15rem; line-height: 1.3; color: var(--text); }
+        .toc-item.active { background: rgba(139, 45, 31, 0.05); border-left: 5px solid var(--accent); padding-left: 15px; }
+        .toc-item.active .c-name { color: var(--accent); font-weight: bold; }
+
+        /* Referral Success Modal */
+        #ref-success-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: none; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(4px); }
+        #ref-success-modal.open { display: flex; }
+        .modal-content { background: var(--bg); border-radius: 16px; padding: 30px 20px; text-align: center; width: 100%; max-width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid var(--border); }
+        .modal-content h2 { font-family: var(--font-b); color: var(--accent); margin-bottom: 15px; font-size: 1.5rem; }
+        .modal-content p { font-size: 0.95rem; color: var(--text); margin-bottom: 20px; line-height: 1.5; }
+
+        /* Book Formatting */
+        .chapter-title { color: var(--accent); font-size: 1.8em; margin-bottom: 1em; font-family: var(--font-u); line-height: 1.2; }
+        .drop-cap::first-letter { float: left; font-size: 4em; line-height: 0.8; padding-right: 8px; padding-top: 4px; color: var(--accent); font-weight: bold; }
+        .pull-quote { border-left: 4px solid var(--accent); padding-left: 15px; font-style: italic; font-size: 1.1em; margin: 20px 0; opacity: 0.9; }
+        .callout { padding: 15px; border-radius: 8px; margin: 20px 0; font-family: var(--font-u); font-size: 0.95em; background: rgba(245, 175, 25, 0.1); border-left: 4px solid #f5af19; }
+        .book-list { padding-left: 20px; margin-bottom: 20px; }
+        .book-list li { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div id="error-box"></div>
+    
+    <!-- REFERRAL SUCCESS MODAL -->
+    <div id="ref-success-modal">
+        <div class="modal-content">
+            <div style="font-size: 3rem; margin-bottom: 10px;">🎉</div>
+            <h2>Referral Applied!</h2>
+            <p>You unlocked the book and your friend just earned <strong>₦500</strong>!</p>
+            <p>Want to earn too? Go to your Library to get your own referral code and share with friends.</p>
+            <button class="btn" onclick="document.getElementById('ref-success-modal').classList.remove('open')">Go to My Library</button>
+        </div>
+    </div>
+
+    <div id="app">
+        <header id="app-header">
+            <div style="width: 44px; display: flex; justify-content: flex-start;">
+                <button id="header-back" class="header-btn hidden" onclick="goBack()">←</button>
+            </div>
+            <div id="header-title">From Dull to Genius</div>
+            <div style="width: 90px; display: flex; justify-content: flex-end; gap: 8px; align-items: center;">
+                <button id="header-contents" class="header-btn toc-pill hidden" onclick="openTOC()">☰ Contents</button>
+                <button class="header-btn" onclick="toggleDarkMode()">◐</button>
+            </div>
+        </header>
+
+        <!-- HOME SCREEN -->
+        <div id="login-screen" class="screen active">
+            <div class="hero">
+                <div class="hero-book"><span>From Dull to Genius</span><br><span style="font-size:0.6rem; opacity:0.9; margin-top:15px;">By Simeon Ogho</span></div>
+                <h1 class="hero-title">Unlock Academic Excellence</h1>
+                <p class="hero-sub">The Hidden Secrets of Academic Success</p>
+            </div>
+            <div class="home-cont">
+                <div class="box">
+                    <div class="box-title">Already have a code?</div>
+                    <input type="email" class="input" placeholder="Email Address" id="email-input">
+                    <input type="text" class="input" placeholder="6-digit Access Code" id="code-input" maxlength="6">
+                    <input type="text" class="input ref-input" style="font-size:0.85rem; margin-top:5px;" placeholder="Referral Code (Optional)" id="ref-input">
+                    <button class="btn" onclick="login()" id="login-btn">Activate & Read</button>
+                    <p style="margin-top:10px; font-size:0.8rem; color:gray; text-align:center;" id="login-msg">Single-device lock enabled.</p>
+                </div>
+                <div class="box sales">
+                    <div class="box-title">Don't have an access code?</div>
+                    <div class="price"><span class="old">₦7,000</span><span class="new">₦4,800</span></div>
+                    <p style="font-size:0.85rem; color:gray; margin-bottom:15px;">Get lifetime access. Pay via transfer and get your code on WhatsApp.</p>
+                    <a href="https://wa.me/2347062605368?text=Hello%20Head%20of%20Operations%2C%20I%20want%20to%20buy%20From%20Dull%20to%20Genius%20for%20N4800.%20Please%20send%20me%20my%20access%20code." class="wa-btn" target="_blank"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.77.46 3.44 1.27 4.89L2 22l5.11-1.27C8.56 21.54 10.23 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.63 0-3.15-.47-4.44-1.28l-3.11.77.77-3.11C4.47 15.15 4 13.63 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8zm3.5-5.5c-.19-.09-1.12-.55-1.29-.61-.17-.06-.29-.09-.41.09-.12.18-.47.61-.58.73-.11.12-.21.13-.4.04-1.08-.53-1.79-1.24-2.1-1.8-.15-.26-.02-.4.11-.53.12-.12.27-.31.4-.46.13-.15.17-.26.25-.44.08-.18.04-.34-.04-.46-.08-.12-.47-1.13-.64-1.54-.17-.41-.34-.35-.47-.36h-.4c-.13 0-.34.05-.52.24-.18.19-.69.67-.69 1.64 0 .97.71 1.9.81 2.03.1.13 1.4 2.14 3.39 3 .47.2.84.32 1.13.41.47.15.9.13 1.24.08.38-.06 1.12-.46 1.28-.9.16-.44.16-.82.11-.9-.05-.08-.17-.13-.36-.22z"/></svg> DM Head of Operations</a>
+                    <a href="https://wa.me/2347015013920?text=Hello%20Head%20of%20Marketing%2C%20I%20want%20to%20buy%20From%20Dull%20to%20Genius%20for%20N4800.%20Please%20send%20me%20my%20access%20code." class="wa-btn sec" target="_blank"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.77.46 3.44 1.27 4.89L2 22l5.11-1.27C8.56 21.54 10.23 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.63 0-3.15-.47-4.44-1.28l-3.11.77.77-3.11C4.47 15.15 4 13.63 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8zm3.5-5.5c-.19-.09-1.12-.55-1.29-.61-.17-.06-.29-.09-.41.09-.12.18-.47.61-.58.73-.11.12-.21.13-.4.04-1.08-.53-1.79-1.24-2.1-1.8-.15-.26-.02-.4.11-.53.12-.12.27-.31.4-.46.13-.15.17-.26.25-.44.08-.18.04-.34-.04-.46-.08-.12-.47-1.13-.64-1.54-.17-.41-.34-.35-.47-.36h-.4c-.13 0-.34.05-.52.24-.18.19-.69.67-.69 1.64 0 .97.71 1.9.81 2.03.1.13 1.4 2.14 3.39 3 .47.2.84.32 1.13.41.47.15.9.13 1.24.08.38-.06 1.12-.46 1.28-.9.16-.44.16-.82.11-.9-.05-.08-.17-.13-.36-.22z"/></svg> DM Head of Marketing</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIBRARY SCREEN -->
+        <div id="library-screen" class="screen">
+            <div class="lib-card">
+                <div class="lib-cover">From Dull to Genius</div>
+                <div style="font-size:1.2rem; font-weight:bold;">From Dull to Genius</div>
+                <div style="font-size:0.9rem; color:gray; margin-bottom:20px;">By Uduvwuode Simeon Ogho</div>
+                <button class="btn" id="continue-btn" onclick="openReader()">Start Reading</button>
+                <button class="btn-text" onclick="resetProgress()">Reset Reading Progress</button>
+                <button class="btn-text" onclick="logout()">Log Out / Change Code</button>
+            </div>
+            
+            <div class="ref-card" id="ref-card" style="display:none;">
+                <div style="font-weight: bold; font-size: 1rem; margin-bottom: 5px;">Refer & Earn ₦500</div>
+                <p style="font-size: 0.85rem; color: gray;">Share this code with a friend. When they buy the book, you get ₦500!</p>
+                <div class="ref-code-box" id="my-ref-code">LOADING...</div>
+                <button class="btn" style="padding: 10px; font-size: 0.9rem;" onclick="shareReferral()">Share Code on WhatsApp</button>
+                <div style="margin-top: 10px; font-size: 0.85rem; color: var(--accent); font-weight: bold;" id="my-balance">Balance: ₦0</div>
+            </div>
+        </div>
+
+        <!-- READER SCREEN -->
+        <div id="reader-screen" class="screen">
+            <div id="prog-cont"><div id="prog"></div></div>
+            <div id="chap-wrap"><div id="chapter-page" class="chap-page"><p style="text-align:center; margin-top:50px;">Loading book...</p></div></div>
+            
+            <div id="toc-modal">
+                <div class="toc-head"><h3>Table of Contents</h3><button class="r-btn" onclick="closeTOC()">✕</button></div>
+                <div class="toc-list" id="toc-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showError(msg) { const b = document.getElementById('error-box'); b.innerText = msg; b.style.display = 'block'; setTimeout(() => b.style.display = 'none', 8000); }
+        
+        const SUPABASE_URL = 'https://ayjxzayhtcxekvjepgax.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_BIOlB9IWlxsvWuRvzMJo_Q_EM57iDGM';
+        let db;
+        try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { showError("Supabase Init Error: " + e.message); }
+
+        let bookData = []; 
+        let currentChapterIndex = 0;
+        let isAnimating = false;
+        let sqliteDb = null;
+        let isNative = window.Capacitor && window.Capacitor.isNativePlatform();
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            if(localStorage.getItem('user_email')) {
+                showScreen('library-screen');
+                updateButtonText();
+                await checkReferralStatus();
+            }
+        });
+
+        function getDeviceId() {
+            let id = localStorage.getItem('device_id');
+            if (!id) { id = 'dev_' + Math.random().toString(36).substr(2, 9); localStorage.setItem('device_id', id); }
+            return id;
+        }
+
+        async function checkReferralStatus() {
+            const code = localStorage.getItem('access_code');
+            if (!code) return;
+            try {
+                const { data } = await db.from('access_codes').select('referral_code, wallet_balance').eq('code', code).single();
+                if (data && data.referral_code) {
+                    localStorage.setItem('my_referral_code', data.referral_code);
+                    localStorage.setItem('my_wallet_balance', data.wallet_balance || 0);
+                    
+                    document.getElementById('ref-card').style.display = 'block';
+                    document.getElementById('my-ref-code').innerText = data.referral_code;
+                    document.getElementById('my-balance').innerText = `Balance: ₦${data.wallet_balance || 0}`;
+                }
+            } catch(e) { console.log('Error fetching referral', e); }
+        }
+
+        function shareReferral() {
+            const refCode = localStorage.getItem('my_referral_code');
+            const text = `🎓 Unlock the secrets of academic success!\n\nBuy 'From Dull to Genius' for ₦4,800 at https://dull2genius.vercel.app and use my referral code: ${refCode} to get instant access.\n\n© 2026 From Dull to Genius. All rights reserved.`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        }
+
+        async function login() {
+            const email = document.getElementById('email-input').value.trim();
+            const code = document.getElementById('code-input').value.trim();
+            const referrer = document.getElementById('ref-input').value.trim();
+            const btn = document.getElementById('login-btn');
+            
+            if(!email || !code) return alert("Please fill in both fields.");
+            btn.innerText = "Checking..."; btn.disabled = true;
+            
+            try {
+                // Call the RPC function we created in the database
+                const { data, error } = await db.rpc('login_with_referral', {
+                    p_code: code,
+                    p_device_id: getDeviceId(),
+                    p_referrer_code: referrer
+                });
+
+                if (error) throw error;
+                
+                // If the RPC returned a failure
+                if (!data.success) {
+                    showError(data.message);
+                    btn.innerText = "Activate & Read"; btn.disabled = false; 
+                    return;
+                }
+                
+                // Save user data
+                localStorage.setItem('user_email', email); 
+                localStorage.setItem('access_code', code); 
+                
+                btn.innerText = "Activate & Read"; btn.disabled = false;
+                showScreen('library-screen'); 
+                updateButtonText();
+                await checkReferralStatus();
+
+                // If they were referred, show the success modal
+                if (data.was_referred) {
+                    document.getElementById('ref-success-modal').classList.add('open');
+                }
+                
+            } catch (err) { 
+                showError("Login Error: " + err.message); 
+                btn.innerText = "Activate & Read"; btn.disabled = false; 
+            }
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            
+            const backBtn = document.getElementById('header-back');
+            const tocBtn = document.getElementById('header-contents');
+            const title = document.getElementById('header-title');
+
+            if (id === 'reader-screen') {
+                backBtn.classList.remove('hidden');
+                tocBtn.classList.remove('hidden');
+                title.innerText = 'Reading'; title.classList.add('reading-mode');
+                title.style.color = 'var(--accent)';
+            } else if (id === 'library-screen') {
+                backBtn.classList.add('hidden');
+                tocBtn.classList.add('hidden');
+                title.innerText = 'My Library'; title.classList.remove('reading-mode');
+                title.style.color = 'var(--text)';
+            } else {
+                backBtn.classList.add('hidden');
+                tocBtn.classList.add('hidden');
+                title.innerText = 'From Dull to Genius'; title.classList.remove('reading-mode');
+                title.style.color = 'var(--accent)';
+            }
+        }
+
+        async function initDB() {
+            if (!isNative) return; 
+            try {
+                const { CapacitorSQLite, SQLiteConnection } = window.capacitorSQLitePlugin;
+                const sqlite = new SQLiteConnection(CapacitorSQLite);
+                sqliteDb = await sqlite.createConnection("dull_to_genius", true, "no-encryption", 1, false);
+                await sqliteDb.open();
+                await sqliteDb.execute(`CREATE TABLE IF NOT EXISTS chapters (id INTEGER PRIMARY KEY, title TEXT, content TEXT);`);
+            } catch (e) { console.error("SQLite Init Error:", e); }
+        }
+
+        async function fetchBookData() {
+            if (bookData.length > 0) return; 
+            if (isNative && !sqliteDb) await initDB();
+
+            if (isNative && sqliteDb) {
+                try {
+                    const res = await sqliteDb.query("SELECT * FROM chapters ORDER BY id ASC");
+                    if (res.values && res.values.length > 0) {
+                        bookData = res.values; buildTOCList(); return;
+                    }
+                } catch (e) { console.error("DB Read Error:", e); }
+            } else {
+                const cached = localStorage.getItem('web_cached_book');
+                if (cached) { bookData = JSON.parse(cached); buildTOCList(); return; }
+            }
+
+            try {
+                const { data, error } = await db.from('chapters').select('*').order('chapter_number', { ascending: true });
+                if (error) throw error;
+                bookData = data || [];
+                buildTOCList();
+
+                if (bookData.length > 0) {
+                    if (isNative && sqliteDb) {
+                        await sqliteDb.execute("DELETE FROM chapters;"); 
+                        for (let chap of bookData) {
+                            await sqliteDb.run("INSERT INTO chapters (id, title, content) VALUES (?, ?, ?);", [chap.chapter_number, chap.title, chap.content]);
+                        }
+                    } else {
+                        localStorage.setItem('web_cached_book', JSON.stringify(bookData));
+                    }
+                }
+            } catch (err) { showError("Fetch Error: " + err.message); }
+        }
+
+        function buildTOCList() {
+            const list = document.getElementById('toc-list'); 
+            list.innerHTML = '';
+            bookData.forEach((chap, i) => {
+                const div = document.createElement('div'); 
+                div.className = 'toc-item';
+                let parts = chap.title.split(':');
+                div.innerHTML = (parts.length > 1) ? `<span class="c-label">${parts[0].trim()}</span><span class="c-name">${parts.slice(1).join(':').trim()}</span>` : `<span class="c-name">${chap.title}</span>`;
+                div.onclick = () => { closeTOC(); loadChapter(i, i > currentChapterIndex ? 'next' : 'prev'); };
+                list.appendChild(div);
+            });
+        }
+
+        async function openReader() {
+            showScreen('reader-screen');
+            let cp = document.getElementById('chapter-page');
+            cp.innerHTML = '<p style="text-align:center; margin-top:50px;">Loading book...</p>';
+            
+            await fetchBookData();
+            
+            if (bookData.length === 0) return cp.innerHTML = '<p style="text-align:center; margin-top:50px;">No chapters found. Check DB.</p>';
+            
+            let sc = parseInt(localStorage.getItem('current_chapter_index')) || 0;
+            if (sc >= bookData.length) sc = 0;
+            loadChapter(sc, 'none');
+        }
+
+        function loadChapter(index, dir) {
+            if (isAnimating || index < 0 || index >= bookData.length) return;
+            isAnimating = true; currentChapterIndex = index; localStorage.setItem('current_chapter_index', index);
+            
+            let html = `<h1 class="chapter-title">${bookData[index].title}</h1>${bookData[index].content}`;
+            if (index < bookData.length - 1) {
+                html += `<button class="next-btn" onclick="navigateChapter(1)">Next: ${bookData[index + 1].title.split(':')[0]} →</button>`;
+            } else {
+                html += `<div style="text-align: center; margin-top: 40px; color: gray;">End of Book</div>`;
+            }
+
+            let cp = document.getElementById('chapter-page');
+            
+            if (dir === 'none') {
+                cp.className = 'chap-page'; cp.innerHTML = html;
+                setTimeout(() => { 
+                    cp.scrollTop = parseInt(localStorage.getItem(`scroll_ch_${index}`)) || 0; 
+                    updateProg(cp); isAnimating = false; 
+                }, 50);
+                return;
+            }
+            
+            const np = document.createElement('div'); np.className = 'chap-page'; np.innerHTML = html;
+            document.getElementById('chap-wrap').appendChild(np);
+            cp.classList.add(dir === 'next' ? 'slide-out-l' : 'slide-out-r'); 
+            np.classList.add(dir === 'next' ? 'slide-in-r' : 'slide-in-l');
+            
+            setTimeout(() => {
+                cp.remove(); 
+                np.className = 'chap-page'; np.id = 'chapter-page';
+                np.scrollTop = parseInt(localStorage.getItem(`scroll_ch_${index}`)) || 0; 
+                updateProg(np); isAnimating = false;
+            }, 300);
+        }
+
+        function updateProg(el) { 
+            const sh = el.scrollHeight - el.clientHeight; 
+            document.getElementById('prog').style.width = (sh > 0 ? (el.scrollTop / sh * 100) : 100) + '%'; 
+        }
+        
+        function navigateChapter(dir) { loadChapter(currentChapterIndex + dir, dir === 1 ? 'next' : 'prev'); }
+        
+        let tX = 0, tY = 0;
+        document.getElementById('chap-wrap').addEventListener('touchstart', e => { 
+            tX = e.changedTouches[0].screenX; tY = e.changedTouches[0].screenY; 
+        }, {passive: true});
+        
+        document.getElementById('chap-wrap').addEventListener('touchend', e => {
+            let dX = e.changedTouches[0].screenX - tX; let dY = e.changedTouches[0].screenY - tY;
+            if (Math.abs(dX) > Math.abs(dY) && Math.abs(dX) > 60) navigateChapter(dX < 0 ? 1 : -1);
+        }, {passive: true});
+
+        let sT;
+        document.getElementById('chap-wrap').addEventListener('scroll', (e) => {
+            if (!e.target.classList.contains('chap-page')) return;
+            updateProg(e.target);
+            clearTimeout(sT); sT = setTimeout(() => localStorage.setItem(`scroll_ch_${currentChapterIndex}`, e.target.scrollTop), 200);
+        }, true); 
+
+        function updateButtonText() {
+            let sc = parseInt(localStorage.getItem('current_chapter_index')) || 0;
+            document.getElementById('continue-btn').innerText = (bookData.length > 0 && sc < bookData.length) ? `Continue Reading (${bookData[sc].title.split(':')[0]} • ${Math.round((sc/bookData.length)*100)}%)` : `Start Reading`;
+        }
+
+        function openTOC() { 
+            document.querySelectorAll('.toc-item').forEach((item, i) => item.classList.toggle('active', i === currentChapterIndex)); 
+            document.getElementById('toc-modal').classList.add('open'); 
+        }
+        
+        function closeTOC() { document.getElementById('toc-modal').classList.remove('open'); }
+        function goBack() { showScreen('library-screen'); updateButtonText(); }
+        function resetProgress() { localStorage.removeItem('current_chapter_index'); for(let i=0; i<50; i++) localStorage.removeItem(`scroll_ch_${i}`); updateButtonText(); alert("Progress reset."); }
+        
+        async function logout() { 
+            try { await db.from('access_codes').update({ is_used: false, device_id: null }).eq('device_id', getDeviceId()); } catch(e){} 
+            if (isNative && sqliteDb) { await sqliteDb.execute("DELETE FROM chapters;"); await sqliteDb.close(); sqliteDb = null; }
+            localStorage.removeItem('user_email'); 
+            localStorage.removeItem('access_code'); 
+            localStorage.removeItem('web_cached_book'); 
+            localStorage.removeItem('my_referral_code'); 
+            localStorage.removeItem('my_wallet_balance');
+            document.getElementById('email-input').value = '';
+            document.getElementById('code-input').value = '';
+            document.getElementById('ref-input').value = '';
+            showScreen('login-screen'); 
+        }
+        
+        function toggleDarkMode() { document.body.classList.toggle('dark-mode'); }
+    </script>
+</body>
+</html>
