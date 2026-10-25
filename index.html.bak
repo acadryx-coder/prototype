@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>From Dull to Genius - App</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root {
+            --bg-color: #f7f4eb; --text-color: #1a1a1a; --accent-color: #8b2d1f;
+            --card-bg: #ffffff; --font-body: 'Georgia', serif; --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-size: 17px; --line-height: 1.7; --border-color: #e0e0e0;
+            --whatsapp-green: #25D366;
+        }
+        body.dark-mode {
+            --bg-color: #121212; --text-color: #e8e8e8; --accent-color: #ff8a65;
+            --card-bg: #1e1e1e; --border-color: #333333;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: var(--font-ui); background-color: #e5e5e5; color: var(--text-color); 
+            transition: background-color 0.3s, color 0.3s; display: flex; justify-content: center; height: 100vh; overflow: hidden;
+        }
+        #app-container {
+            width: 100%; max-width: 480px; height: 100%; background-color: var(--bg-color);
+            position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; background-color: var(--bg-color); overflow-y: auto; }
+        .screen.active { display: flex; }
+
+        /* --- HERO SECTION (Login) --- */
+        .hero-section { padding: 40px 20px 30px; text-align: center; background: linear-gradient(180deg, rgba(245, 175, 25, 0.15) 0%, var(--bg-color) 100%); border-bottom: 1px solid var(--border-color); }
+        .hero-book-cover { width: 130px; height: 190px; margin: 0 auto 20px; background: linear-gradient(135deg, #f5af19, #f12711); border-radius: 4px 10px 10px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; color: white; font-weight: bold; font-family: var(--font-body); box-shadow: -5px 5px 15px rgba(0,0,0,0.3), inset 4px 0 0 rgba(255,255,255,0.2); transform: perspective(600px) rotateY(-5deg); }
+        .hero-book-title { font-size: 1.1rem; line-height: 1.2; margin-bottom: 15px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+        .hero-book-author { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; }
+        .hero-title { font-size: 1.5rem; font-weight: 800; color: var(--accent-color); margin-bottom: 8px; line-height: 1.2; }
+        .hero-subtitle { font-size: 0.85rem; color: gray; font-style: italic; }
+
+        .home-content { padding: 20px; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .login-box { width: 100%; max-width: 350px; background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); }
+        .login-header { font-size: 1rem; font-weight: bold; margin-bottom: 15px; text-align: center; }
+        .input-group { margin-bottom: 12px; }
+        .input-group input { width: 100%; padding: 12px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; background: var(--bg-color); color: var(--text-color); }
+        .btn { width: 100%; padding: 14px; background-color: var(--accent-color); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+        .login-msg { margin-top: 10px; font-size: 0.8rem; color: gray; text-align: center; }
+
+        .sales-card { width: 100%; max-width: 350px; background: var(--card-bg); border-radius: 12px; padding: 20px; text-align: center; border: 1px solid var(--border-color); border-top: 4px solid var(--accent-color); }
+        .sales-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; }
+        .price-container { margin-bottom: 15px; display: flex; justify-content: center; align-items: baseline; gap: 8px; }
+        .old-price { text-decoration: line-through; color: gray; font-size: 1rem; }
+        .new-price { font-size: 1.8rem; font-weight: bold; color: var(--accent-color); }
+        .sales-desc { font-size: 0.85rem; color: gray; margin-bottom: 15px; line-height: 1.4; }
+        .whatsapp-btn { display: flex; align-items: center; justify-content: center; width: 100%; padding: 12px; background-color: var(--whatsapp-green); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 0.95rem; margin-bottom: 10px; }
+        .whatsapp-btn.secondary { background-color: #128C7E; }
+        .whatsapp-btn svg { width: 20px; height: 20px; margin-right: 8px; fill: white; }
+
+        /* --- LIBRARY --- */
+        #library-screen { padding: 20px; align-items: center; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; width: 100%; max-width: 400px; }
+        .book-card { background: var(--card-bg); border-radius: 12px; padding: 20px; text-align: center; border: 1px solid var(--border-color); width: 100%; max-width: 400px; }
+        .book-cover { width: 140px; height: 200px; margin: 0 auto 15px; background: linear-gradient(135deg, #f5af19, #f12711); border-radius: 6px; display: flex; align-items: center; justify-content: center; padding: 10px; color: white; font-weight: bold; font-family: var(--font-body); font-size: 1.2rem; box-shadow: 5px 5px 15px rgba(0,0,0,0.2); }
+        .book-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; }
+        .book-author { font-size: 0.9rem; color: gray; margin-bottom: 20px; }
+        .btn-text { background: none; border: none; color: gray; font-size: 0.85rem; margin-top: 15px; cursor: pointer; text-decoration: underline; }
+
+        /* --- READER --- */
+        #reader-screen { z-index: 10; overflow: hidden; } /* Hide overflow for animation */
+        .reader-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--border-color); background: var(--bg-color); position: sticky; top: 0; z-index: 20;}
+        .back-btn, .toc-btn { font-size: 1.5rem; cursor: pointer; color: var(--accent-color); background: none; border: none; }
+        .toc-btn { font-size: 1rem; font-weight: bold; font-family: var(--font-ui); display: flex; align-items: center; gap: 5px; }
+        
+        /* Animation Container */
+        #chapter-wrapper { flex: 1; position: relative; overflow: hidden; }
+        .chapter-page { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            padding: 25px 20px 80px; /* Bottom padding for nav buttons */
+            overflow-y: auto; 
+            font-family: var(--font-body); font-size: var(--font-size); line-height: var(--line-height); color: var(--text-color);
+            background: var(--bg-color);
+        }
+
+        /* Animations */
+        .slide-in-right { animation: slideInRight 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards; z-index: 2; }
+        .slide-out-left { animation: slideOutLeft 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards; z-index: 1; }
+        .slide-in-left { animation: slideInLeft 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards; z-index: 2; }
+        .slide-out-right { animation: slideOutRight 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards; z-index: 1; }
+
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes slideOutLeft { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+        @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        @keyframes slideOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }
+
+        /* Bottom Nav */
+        .reader-footer {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            display: flex; justify-content: space-between; padding: 15px 20px;
+            background: linear-gradient(0deg, var(--bg-color) 60%, transparent 100%);
+            border-top: 1px solid var(--border-color); z-index: 20;
+        }
+        .nav-btn { padding: 10px 20px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; font-weight: bold; color: var(--text-color); cursor: pointer; }
+        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* --- TOC MODAL --- */
+        #toc-modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); z-index: 50;
+            transform: translateY(100%); transition: transform 0.3s ease;
+            display: flex; flex-direction: column;
+        }
+        #toc-modal.open { transform: translateY(0); }
+        .toc-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--border-color); }
+        .toc-header h3 { font-size: 1.2rem; }
+        .close-toc { font-size: 1.5rem; background: none; border: none; color: var(--text-color); cursor: pointer; }
+        .toc-list { flex: 1; overflow-y: auto; padding: 10px 0; }
+        .toc-item { padding: 15px 20px; border-bottom: 1px solid var(--border-color); cursor: pointer; font-size: 1rem; font-family: var(--font-ui); }
+        .toc-item:active { background: rgba(0,0,0,0.05); }
+        .toc-item.active { color: var(--accent-color); font-weight: bold; border-left: 4px solid var(--accent-color); padding-left: 16px; }
+
+        /* BOOK STYLES */
+        .chapter-title { color: var(--accent-color); font-size: 1.8em; margin-bottom: 1em; font-family: var(--font-ui); line-height: 1.2; }
+        .drop-cap::first-letter { float: left; font-size: 4em; line-height: 0.8; padding-right: 8px; padding-top: 4px; color: var(--accent-color); font-weight: bold; }
+        .pull-quote { border-left: 4px solid var(--accent-color); padding-left: 15px; font-style: italic; font-size: 1.1em; margin: 20px 0; opacity: 0.9; }
+        .callout { padding: 15px; border-radius: 8px; margin: 20px 0; font-family: var(--font-ui); font-size: 0.95em; background: rgba(245, 175, 25, 0.1); border-left: 4px solid #f5af19; }
+        .callout h3 { margin-bottom: 5px; font-size: 1.1em; }
+        .book-list { padding-left: 20px; margin-bottom: 20px; }
+        .book-list li { margin-bottom: 10px; }
+        
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        
+        <!-- HOME SCREEN -->
+        <div id="login-screen" class="screen active">
+            <div class="hero-section">
+                <div class="hero-book-cover">
+                    <span class="hero-book-title">From Dull to Genius</span>
+                    <span class="hero-book-author">By Simeon Ogho</span>
+                </div>
+                <h1 class="hero-title">Unlock Academic Excellence</h1>
+                <p class="hero-subtitle">The Hidden Secrets of Academic Success</p>
+            </div>
+
+            <div class="home-content">
+                <div class="login-box">
+                    <div class="login-header">Already have a code?</div>
+                    <div class="input-group">
+                        <input type="email" placeholder="Enter your email" id="email-input">
+                    </div>
+                    <div class="input-group">
+                        <input type="text" placeholder="Enter 6-digit code" id="code-input" maxlength="6">
+                    </div>
+                    <button class="btn" onclick="login()" id="login-btn">Activate & Read</button>
+                    <p class="login-msg" id="login-msg">Single-device lock enabled.</p>
+                </div>
+
+                <div class="sales-card">
+                    <div class="sales-title">Don't have an access code?</div>
+                    <div class="price-container">
+                        <span class="old-price">₦7,000</span>
+                        <span class="new-price">₦4,800</span>
+                    </div>
+                    <p class="sales-desc">Get lifetime access to the full book. Pay via transfer and get your code instantly on WhatsApp.</p>
+                    
+                    <a href="https://wa.me/2347062605368?text=Hello%20Operations%2C%20I%20want%20to%20buy%20the%20book%20'From%20Dull%20to%20Genius'%20for%20N4800.%20Please%20send%20me%20my%20access%20code." target="_blank" class="whatsapp-btn">
+                        <svg viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm.029 18.88c-1.161 0-2.305-.292-3.318-.844l-3.677.964.984-3.595c-.607-1.052-.927-2.246-.926-3.468.001-3.825 3.113-6.937 6.937-6.937 3.825 0 6.936 3.112 6.936 6.936s-3.111 6.944-6.936 6.944z"/></svg>
+                        DM Head of Operations
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIBRARY SCREEN -->
+        <div id="library-screen" class="screen">
+            <div class="header">
+                <h2>My Library</h2>
+                <button class="reader-controls" onclick="toggleDarkMode()" style="font-size: 1.2rem; background:none; border:none;">🌓</button>
+            </div>
+            
+            <div class="book-card">
+                <div class="book-cover">From Dull to Genius</div>
+                <div class="book-title">From Dull to Genius</div>
+                <div class="book-author">By Uduvwuode Simeon Ogho</div>
+                <button class="btn" id="continue-btn" onclick="openReader()">Start Reading</button>
+                <button class="btn-text" onclick="resetProgress()">Reset Reading Progress</button>
+                <button class="btn-text" onclick="logout()">Log Out / Change Code</button>
+            </div>
+        </div>
+
+        <!-- READER SCREEN -->
+        <div id="reader-screen" class="screen">
+            <div class="reader-header">
+                <button class="back-btn" onclick="goBack()">←</button>
+                <button class="toc-btn" onclick="openTOC()">☰ Contents</button>
+            </div>
+            
+            <!-- The container for the sliding pages -->
+            <div id="chapter-wrapper">
+                <div id="chapter-page" class="chapter-page">
+                    <p style="text-align:center; margin-top:50px;">Loading book...</p>
+                </div>
+            </div>
+
+            <!-- Bottom Nav -->
+            <div class="reader-footer">
+                <button class="nav-btn" id="prev-btn" onclick="navigateChapter(-1)">← Prev</button>
+                <button class="nav-btn" id="next-btn" onclick="navigateChapter(1)">Next →</button>
+            </div>
+
+            <!-- TABLE OF CONTENTS MODAL -->
+            <div id="toc-modal">
+                <div class="toc-header">
+                    <h3>Table of Contents</h3>
+                    <button class="close-toc" onclick="closeTOC()">✕</button>
+                </div>
+                <div class="toc-list" id="toc-list">
+                    <!-- Chapters will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- SUPABASE CONNECTION ---
+        const SUPABASE_URL = 'https://ayjxzayhtcxekvjepgax.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_BIOlB9IWlxsvWuRvzMJo_Q_EM57iDGM';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // --- STATE ---
+        let bookData = []; // Stores all chapters
+        let currentChapterIndex = 0;
+        let isAnimating = false;
+        const chapterPage = document.getElementById('chapter-page');
+
+        // --- INIT ---
+        window.onload = function() {
+            if(localStorage.getItem('user_email')) {
+                showScreen('library-screen');
+                updateButtonText();
+            }
+        };
+
+        function getDeviceId() {
+            let devId = localStorage.getItem('device_id');
+            if (!devId) {
+                devId = 'dev_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+                localStorage.setItem('device_id', devId);
+            }
+            return devId;
+        }
+
+        async function login() {
+            const email = document.getElementById('email-input').value.trim();
+            const code = document.getElementById('code-input').value.trim();
+            const btn = document.getElementById('login-btn');
+            const msg = document.getElementById('login-msg');
+
+            if(!email || !code) return alert("Please fill in both fields.");
+            btn.innerText = "Checking..."; btn.disabled = true;
+            const deviceId = getDeviceId();
+
+            const { data, error } = await db.from('access_codes').select('*').eq('code', code);
+
+            if (error || !data || data.length === 0) {
+                alert("Invalid access code or database error.");
+                btn.innerText = "Activate & Read"; btn.disabled = false; return;
+            }
+
+            const codeData = data[0];
+            if (codeData.is_used) {
+                if (codeData.device_id === deviceId) { proceedToLibrary(email); } 
+                else {
+                    msg.innerText = "❌ Code locked to another device."; msg.style.color = "red";
+                    btn.innerText = "Activate & Read"; btn.disabled = false;
+                }
+            } else {
+                await db.from('access_codes').update({ is_used: true, device_id: deviceId }).eq('id', codeData.id);
+                proceedToLibrary(email);
+            }
+        }
+
+        function proceedToLibrary(email) {
+            localStorage.setItem('user_email', email); 
+            document.getElementById('login-btn').innerText = "Activate & Read";
+            document.getElementById('login-btn').disabled = false;
+            showScreen('library-screen');
+            updateButtonText();
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // --- FETCH BOOK ONCE ---
+        async function fetchBookData() {
+            if (bookData.length > 0) return; // Already loaded
+            const { data, error } = await db.from('chapters').select('*').order('chapter_number', { ascending: true });
+            if (!error) bookData = data;
+            buildTOC();
+        }
+
+        // --- TOC LOGIC ---
+        function buildTOC() {
+            const list = document.getElementById('toc-list');
+            list.innerHTML = '';
+            bookData.forEach((chapter, index) => {
+                const div = document.createElement('div');
+                div.className = 'toc-item';
+                div.innerText = chapter.title;
+                div.onclick = () => {
+                    closeTOC();
+                    // Calculate direction for animation
+                    let direction = index > currentChapterIndex ? 'next' : 'prev';
+                    loadChapter(index, direction);
+                };
+                list.appendChild(div);
+            });
+        }
+
+        function openTOC() {
+            // Highlight current chapter in TOC
+            document.querySelectorAll('.toc-item').forEach((item, index) => {
+                item.classList.toggle('active', index === currentChapterIndex);
+            });
+            document.getElementById('toc-modal').classList.add('open');
+        }
+
+        function closeTOC() {
+            document.getElementById('toc-modal').classList.remove('open');
+        }
+
+        // --- READING LOGIC & ANIMATIONS ---
+        async function openReader() {
+            showScreen('reader-screen');
+            chapterPage.innerHTML = '<p style="text-align:center;">Loading book...</p>';
+            
+            await fetchBookData();
+            
+            // Load saved chapter or start at 0
+            let savedChapter = parseInt(localStorage.getItem('current_chapter_index'));
+            if (isNaN(savedChapter) || savedChapter >= bookData.length) savedChapter = 0;
+            
+            loadChapter(savedChapter, 'none');
+        }
+
+        function loadChapter(index, direction) {
+            if (isAnimating || index < 0 || index >= bookData.length) return;
+            
+            isAnimating = true;
+            currentChapterIndex = index;
+            localStorage.setItem('current_chapter_index', index);
+            updateButtonText();
+
+            const chapter = bookData[index];
+
+            // Update Nav Buttons
+            document.getElementById('prev-btn').disabled = (index === 0);
+            document.getElementById('next-btn').disabled = (index === bookData.length - 1);
+
+            // If no animation needed (initial load)
+            if (direction === 'none') {
+                chapterPage.className = 'chapter-page';
+                chapterPage.innerHTML = `<h1 class="chapter-title">${chapter.title}</h1>${chapter.content}`;
+                
+                // Restore scroll for this specific chapter
+                const savedScroll = localStorage.getItem(`scroll_ch_${index}`);
+                setTimeout(() => { chapterPage.scrollTop = savedScroll ? parseInt(savedScroll) : 0; }, 50);
+                
+                isAnimating = false;
+                return;
+            }
+
+            // Animation Logic
+            const newPage = document.createElement('div');
+            newPage.className = 'chapter-page';
+            newPage.innerHTML = `<h1 class="chapter-title">${chapter.title}</h1>${chapter.content}`;
+            
+            // Save current scroll before leaving
+            localStorage.setItem(`scroll_ch_${currentChapterIndex - (direction==='next'?1:-1)}`, chapterPage.scrollTop);
+
+            // Add new page to DOM
+            document.getElementById('chapter-wrapper').appendChild(newPage);
+
+            // Apply animation classes
+            const outClass = direction === 'next' ? 'slide-out-left' : 'slide-out-right';
+            const inClass = direction === 'next' ? 'slide-in-right' : 'slide-in-left';
+
+            chapterPage.classList.add(outClass);
+            newPage.classList.add(inClass);
+
+            // Wait for animation to finish, then clean up
+            setTimeout(() => {
+                document.getElementById('chapter-wrapper').removeChild(chapterPage);
+                newPage.className = 'chapter-page'; // Reset class
+                newPage.id = 'chapter-page'; // Transfer ID
+                
+                // Update global reference
+                window.chapterPage = newPage; 
+                const chapterPage = newPage; // Shadow for local use if needed
+                
+                // Restore scroll for the new chapter
+                const savedScroll = localStorage.getItem(`scroll_ch_${index}`);
+                newPage.scrollTop = savedScroll ? parseInt(savedScroll) : 0;
+                
+                isAnimating = false;
+            }, 300); // Matches CSS animation duration
+        }
+
+        function navigateChapter(dir) {
+            loadChapter(currentChapterIndex + dir, dir === 1 ? 'next' : 'prev');
+        }
+
+        // --- SCROLL TRACKING (Per Chapter) ---
+        let scrollTimeout;
+        // Use event delegation since pages are dynamically created
+        document.getElementById('chapter-wrapper').addEventListener('scroll', (e) => {
+            if (!e.target.classList.contains('chapter-page')) return;
+            
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                localStorage.setItem(`scroll_ch_${currentChapterIndex}`, e.target.scrollTop);
+            }, 200);
+        }, true); // Use capture phase for scroll events
+
+        // --- UI UPDATES ---
+        const continueBtn = document.getElementById('continue-btn');
+
+        function updateButtonText() {
+            let savedChapter = parseInt(localStorage.getItem('current_chapter_index')) || 0;
+            if(bookData.length > 0 && savedChapter < bookData.length) {
+                const title = bookData[savedChapter].title.split(':')[0]; // E.g., "Chapter 1"
+                continueBtn.innerText = `Continue Reading (${title})`;
+            } else {
+                continueBtn.innerText = `Start Reading`;
+            }
+        }
+
+        function goBack() {
+            showScreen('library-screen');
+        }
+
+        function resetProgress() {
+            localStorage.removeItem('current_chapter_index');
+            for(let i=0; i<50; i++) localStorage.removeItem(`scroll_ch_${i}`);
+            updateButtonText();
+            alert("Reading progress reset.");
+        }
+
+        function logout() {
+            localStorage.removeItem('user_email');
+            document.getElementById('email-input').value = '';
+            document.getElementById('code-input').value = '';
+            showScreen('login-screen');
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        let currentFontSize = 17;
+        function changeFontSize(change) {
+            currentFontSize += change;
+            if(currentFontSize < 14) currentFontSize = 14;
+            if(currentFontSize > 24) currentFontSize = 24;
+            document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
+        }
+    </script>
+</body>
+</html>
